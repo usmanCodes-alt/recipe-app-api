@@ -1,0 +1,17 @@
+# list of file that are excluded from docker context (i.e, list of files that docker doesn't need to be concerned about)
+
+# Git
+.git
+.gitignore
+
+# Docker
+.docker
+
+# python
+app/__pycache__/
+app/*/__pycache__/
+app/*/*/__pycache__/
+app/*/*/*/__pycache__/
+.env/
+.venv/
+venv/
