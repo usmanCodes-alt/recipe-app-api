@@ -7,6 +7,7 @@ from rest_framework import status
 
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse('user:token')
+ME_URL = reverse('user:me')
 
 
 def create_user(**params):
@@ -55,30 +56,13 @@ class PublicUserAPITests(TestCase):
             'name': 'name of the user'
         }
 
-        res = self.client.post(CREATE_USER_URL, payload)
+        self.client.post(CREATE_USER_URL, payload)
+
         user_exists = get_user_model().objects.filter(
             email=payload['email']
         ).exists()
+
         self.assertFalse(user_exists)
-
-    # def test_create_token_for_user(self):
-    #     """Test create token for valid credentials"""
-    #     user_details = {
-    #         'name': 'Test name',
-    #         'email': 'test@example.com',
-    #         'password': 'test-user-password'
-    #     }
-
-    #     create_user(**user_details)
-
-    #     payload = {
-    #         'email': 'test@example.com',
-    #         'password': 'test-user-password'
-    #     }
-    #     res = self.client.post(TOKEN_URL, payload)
-
-    #     self.assertIn('token', res.data)
-    #     self.assertEqual(res.status_code, status.HTTP_200_OK)
 
     def create_token_with_bad_credentials(self):
         """Test returns error if credentials are invalid"""
@@ -94,3 +78,45 @@ class PublicUserAPITests(TestCase):
         res = self.client.post(TOKEN_URL, payload)
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_user_unauthorize(self):
+        """Test authentication required for users"""
+        res = self.client.get(ME_URL)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserAPITests(TestCase):
+    """Test API requests that require authentication."""
+
+    def setUp(self):
+        self.user = create_user(
+            email='test@example.com',
+            password='testpass123',
+            name='Test Name'
+        )
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_profile_success(self):
+        """Test retrieving profile for logged in user."""
+        res = self.client.get(ME_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            'name': self.user.name,
+            'email': self.user.email
+        })
+
+    def test_update_user_profile(self):
+        payload = {
+            'name': 'Updated Name',
+            'password': 'newPassword123'
+        }
+
+        res = self.client.patch(ME_URL, payload)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.name, payload['name'])
+        self.assertTrue(self.user.check_password(payload['password']))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)

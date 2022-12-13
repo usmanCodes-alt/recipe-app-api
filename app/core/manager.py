@@ -13,6 +13,7 @@ class UserManager(BaseUserManager):
             **extra_fields
         )
         user.set_password(password)     # creates hash of the password
+        user.is_active = True
         user.save(using=self._db)
 
         return user
@@ -25,7 +26,6 @@ class UserManager(BaseUserManager):
 
         user.is_staff = True
         user.is_superuser = True
-        user.is_active = True
 
         user.save(using=self._db)
 
